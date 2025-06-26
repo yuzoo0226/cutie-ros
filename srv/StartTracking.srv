@@ -1,0 +1,6 @@
+# StartTracking.srv
+sensor_msgs/Image[] images
+sensor_msgs/Image[] masks
+---
+bool success
+string message
