@@ -14,6 +14,13 @@ cd cutie-ros
 git checkout devel/noetic
 ```
 
+## Download weight(s)
+
+```bash
+cd src
+python cutie/utils/download_models.py
+```
+
 ## How to use
 
 ```bash
