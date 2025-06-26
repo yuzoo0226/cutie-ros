@@ -7,15 +7,13 @@ import logging
 import threading
 import numpy as np
 from PIL import PILImage
-from argparse import ArgumentParser
 from torchvision.transforms.functional import to_tensor
 
 from cutie.inference.inference_core import InferenceCore
 from cutie.utils.get_default_model import get_default_model
 
-from std_msgs.msg import String
 from sensor_msgs.msg import Image, CompressedImage
-from hkchengrex_Cutie.srv import StartTracking, StartTrackingResponse, StopTracking, StopTrackingResponse
+from cutie_ros.srv import StartTracking, StartTrackingResponse, StopTracking, StopTrackingResponse
 
 
 class TrackingNode:
@@ -44,6 +42,18 @@ class TrackingNode:
 
         self.target_pil_rgb = PILImage.fromarray(cv_rgb)
 
+    @staticmethod
+    def cv2_to_pillow_image(cv_image: np.ndarray) -> PILImage:
+        if len(cv_image.shape) == 2:
+            # グレースケール画像
+            return PILImage.fromarray(cv_image, mode='L')
+        elif len(cv_image.shape) == 3 and cv_image.shape[2] == 3:
+            # BGR画像をRGBに変換
+            rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+            return PILImage.fromarray(rgb_image)
+        else:
+            raise ValueError("Unsupport Image type")
+
     def handle_start(self, req):
         with self.lock:
             if self.is_tracking:
@@ -60,11 +70,10 @@ class TrackingNode:
 
             # OpenCV(BGR) → RGB
             cv_rgb = cv2.cvtColor(cv_bgr, cv2.COLOR_BGR2RGB)
-            cv_mask = cv2.cvtColor(cv_mask, cv2.COLOR_BGR2RGB)
 
             # NumPy配列 → Pillow画像
             pil_rgb = PILImage.fromarray(cv_rgb)
-            pil_mask = PILImage.fromarray(cv_mask)
+            pil_mask = PILImage.fromarray(cv_mask, mode="L")
 
             assert pil_mask.mode in ['L', 'P']
 
@@ -106,9 +115,8 @@ class TrackingNode:
 
             # visualize prediction
             estimation_mask = PILImage.fromarray(mask.cpu().numpy().astype(np.uint8))
-            cv_rgb = cv2.cvtColor(np.array(estimation_mask), cv2.COLOR_RGB2BGR)
-
-            # RGB → BGR（OpenCVはBGRを使用）
+            pil_rgb = estimation_mask.convert("RGB")
+            cv_rgb = np.array(pil_rgb)
             cv_bgr = cv2.cvtColor(cv_rgb, cv2.COLOR_RGB2BGR)
 
             ros_img_msg = self.bridge.cv2_to_imgmsg(cv_bgr, encoding="bgr8")
