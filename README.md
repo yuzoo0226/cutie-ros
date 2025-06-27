@@ -10,11 +10,12 @@
 
 ```bash
 git clone https://github.com/yuzoo0226/cutie-ros.git
-cd cutie-ros
-git checkout devel/noetic
+git clone https://github.com/tamhome/tam_object_detection.git --recursive-submodule
 ```
 
 ## Download weight(s)
+
+- - When running in apptainer, build ros_ws under `--fakeroot --writable` and make sure the node is started with `rosrun cutie_ros cutie_service_node.py`.
 
 ```bash
 cd src
