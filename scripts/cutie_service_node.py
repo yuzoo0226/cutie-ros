@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import os
 import sys
 import cv2
@@ -6,7 +9,8 @@ import torch
 import logging
 import threading
 import numpy as np
-from PIL import PILImage
+from cv_bridge import CvBridge
+from PIL import Image as PILImage
 from torchvision.transforms.functional import to_tensor
 
 from cutie.inference.inference_core import InferenceCore
@@ -20,12 +24,14 @@ class TrackingNode:
     def __init__(self):
         self.is_tracking = False
         self.lock = threading.Lock()
+        self.bridge = CvBridge()
 
         self.cutie = get_default_model()
         self.processor = InferenceCore(self.cutie, cfg=self.cutie.cfg)
         self.processor.max_internal_size = 480
 
-        self.result_pub = rospy.Publisher("/cutie_tracking/result_image", Image, queue_size=1)
+        self.result_bgr_pub = rospy.Publisher("/cutie_tracking/result_bgr", Image, queue_size=1)
+        self.result_segment_pub = rospy.Publisher("/cutie_tracking/result_segment", Image, queue_size=1)
         self.image_sub = rospy.Subscriber("/hsrb/hand_camera/image_raw/compressed", CompressedImage, self.sub_hand_bgr)
 
         self.start_service = rospy.Service("start_tracking", StartTracking, self.handle_start)
@@ -45,14 +51,25 @@ class TrackingNode:
     @staticmethod
     def cv2_to_pillow_image(cv_image: np.ndarray) -> PILImage:
         if len(cv_image.shape) == 2:
-            # グレースケール画像
             return PILImage.fromarray(cv_image, mode='L')
         elif len(cv_image.shape) == 3 and cv_image.shape[2] == 3:
-            # BGR画像をRGBに変換
             rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
             return PILImage.fromarray(rgb_image)
         else:
             raise ValueError("Unsupport Image type")
+
+    @staticmethod
+    def pillow_to_cv2(pil_img: PILImage) -> np.ndarray:
+        """Convert Pillow image to OpenCV BGR numpy array"""
+        img_np = np.array(pil_img)
+        if pil_img.mode == "RGBA":
+            return cv2.cvtColor(img_np, cv2.COLOR_RGBA2BGR)
+        elif pil_img.mode == "RGB":
+            return cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+        elif pil_img.mode == "L":
+            return img_np
+        else:
+            raise ValueError(f"Unsupported image mode: {pil_img.mode}")
 
     def handle_start(self, req):
         with self.lock:
@@ -64,9 +81,15 @@ class TrackingNode:
         self.masks = req.masks
         self.timestep = 0
 
-        for idx in len(self.images):
-            cv_bgr = self.images[idx]
-            cv_mask = self.masks[idx]
+        print(len(self.images))
+
+        for idx in range(len(self.images)):
+            print(idx)
+            msg_bgr = self.images[idx]
+            msg_mask = self.masks[idx]
+
+            cv_bgr = self.bridge.imgmsg_to_cv2(msg_bgr, "bgr8")
+            cv_mask = self.bridge.imgmsg_to_cv2(msg_mask, "mono8")
 
             # OpenCV(BGR) → RGB
             cv_rgb = cv2.cvtColor(cv_bgr, cv2.COLOR_BGR2RGB)
@@ -87,6 +110,7 @@ class TrackingNode:
             torch_mask = torch.from_numpy(np.array(pil_mask)).cuda()
 
             _ = self.processor.step(torch_rgb, torch_mask, objects=self.objects)
+            break
 
         self.tracking_thread = threading.Thread(target=self.tracking_loop)
         self.tracking_thread.start()
@@ -100,6 +124,32 @@ class TrackingNode:
             self.is_tracking = False
         rospy.loginfo("Tracking stopped by user.")
         return StopTrackingResponse(True, "Tracking stopped.")
+
+    def make_overlay_image(self, pillow_mask, pillow_bgr, color=(0, 0, 255), alpha=0.5):
+        cv_bgr = self.pillow_to_cv2(pillow_bgr)
+        cv_mask = self.pillow_to_cv2(pillow_mask)
+
+        if len(cv_mask.shape) == 3 and cv_mask.shape[2] == 3:
+            cv_mask = cv2.cvtColor(cv_mask, cv2.COLOR_BGR2GRAY)
+        else:
+            cv_mask = cv_mask
+
+        # マスクを2値化
+        mask_bin = (cv_mask > 0).astype(np.uint8)
+
+        # カラーマスクを作成
+        color_mask = np.zeros_like(cv_bgr)
+        color_mask[:] = color
+
+        # マスク領域だけ色を合成
+        overlay = cv_bgr.copy()
+        overlay[mask_bin == 1] = cv2.addWeighted(
+            cv_bgr[mask_bin == 1], 1 - alpha,
+            color_mask[mask_bin == 1], alpha,
+            0
+        )
+
+        return overlay
 
     @torch.inference_mode()
     @torch.cuda.amp.autocast()
@@ -119,8 +169,18 @@ class TrackingNode:
             cv_rgb = np.array(pil_rgb)
             cv_bgr = cv2.cvtColor(cv_rgb, cv2.COLOR_RGB2BGR)
 
-            ros_img_msg = self.bridge.cv2_to_imgmsg(cv_bgr, encoding="bgr8")
-            self.result_pub.publish(ros_img_msg)
+            try:
+                overlay_mask = self.make_overlay_image(pillow_mask=pil_rgb, pillow_bgr=self.target_pil_rgb)
+            except TypeError as e:
+                print(f"{e}: tracking failed")
+
+            cv2.imshow("tracking_image", overlay_mask)
+            cv2.waitKey(1)
+
+            segment_img_msg = self.bridge.cv2_to_imgmsg(cv_bgr, encoding="bgr8")
+            overlay_img_msg = self.bridge.cv2_to_imgmsg(overlay_mask, encoding="bgr8")
+            self.result_segment_pub.publish(segment_img_msg)
+            self.result_bgr_pub.publish(overlay_img_msg)
 
 
 if __name__ == "__main__":

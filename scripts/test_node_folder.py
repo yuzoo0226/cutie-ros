@@ -5,6 +5,7 @@ import os
 import cv2
 import glob
 import rospy
+import numpy as np
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from cutie_ros.srv import StartTracking, StartTrackingRequest
@@ -15,17 +16,14 @@ class StartTrackingTestClient:
         rospy.init_node("test_start_tracking_node")
         self.bridge = CvBridge()
 
-        # サービスが利用可能になるのを待機
         rospy.wait_for_service("start_tracking")
         self.start_service = rospy.ServiceProxy("start_tracking", StartTracking)
 
-        # 画像とマスクのパス（例として ./test_images/）
         image_paths = sorted(glob.glob("./io/test_images/images/*.png"))
         mask_paths = sorted(glob.glob("./io/test_images/masks/*.png"))
 
         assert len(image_paths) == len(mask_paths), "Unmatched images and masks number"
 
-        # 読み込みと変換
         self.images = []
         self.masks = []
 
@@ -37,7 +35,6 @@ class StartTrackingTestClient:
                 rospy.logerr(f"Failed to load {img_path} or {mask_path}")
                 continue
 
-            # 必要に応じてマスクを3チャンネルに変換
             cv_mask_rgb = cv2.cvtColor(cv_mask, cv2.COLOR_GRAY2RGB)
 
             ros_img = self.bridge.cv2_to_imgmsg(cv_img, encoding="bgr8")
@@ -57,7 +54,12 @@ class StartTrackingTestClient:
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call failed: {e}")
 
+    def spin(self):
+        rospy.spin()
+        cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
-    client = StartTrackingTestClient()
-    client.call_start_tracking()
+    node = StartTrackingTestClient()
+    node.spin()
+    node.call_start_tracking()
