@@ -62,5 +62,5 @@ class StartTrackingTestClient:
 
 if __name__ == "__main__":
     node = StartTrackingTestClient()
+    node.call_start_tracking(object_name="door_knob")
     node.spin()
-    node.call_start_tracking(object_name="sink")

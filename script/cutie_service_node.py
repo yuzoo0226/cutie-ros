@@ -21,6 +21,7 @@ from sensor_msgs.msg import Image, CompressedImage
 from cutie_ros.srv import StartTracking, StartTrackingResponse, StopTracking, StopTrackingResponse
 from std_srvs.srv import Trigger, TriggerResponse, TriggerRequest
 
+
 class TrackingNode:
     def __init__(self):
         self.is_tracking = False
@@ -38,6 +39,7 @@ class TrackingNode:
         self.cutie_package_dir = roslib.packages.get_pkg_dir("cutie_ros")
         self.start_service = rospy.Service("/cutie/start_tracking", StartTracking, self.handle_start)
         self.stop_service = rospy.Service("/cutie/stop_tracking", StopTracking, self.handle_stop)
+        self.clear_service = rospy.Service("/cutie/clear_memory", Trigger, self.handle_clear)
 
         self.tracking_thread = None
         rospy.loginfo("TrackingNode initialized.")
