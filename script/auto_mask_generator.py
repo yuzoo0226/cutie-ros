@@ -20,7 +20,6 @@ class AutoMaskGenerator:
         model_type = "vit_t"
         self.package_dir = roslib.packages.get_pkg_dir("cutie_ros")
         sam_checkpoint = os.path.join(self.package_dir, "io/weights/mobile_sam.pt")
-        self.cv_image = cv2.imread("/home/yuga/Pictures/ZED_multiple_dcm/detection/type_1.png", 1)
 
         # self.encoder_path = {
         #     'efficientvit_l2': os.path.join(package_dir, "io/weights/l2.pt"),
