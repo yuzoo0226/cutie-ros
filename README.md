@@ -18,14 +18,23 @@ git clone https://github.com/tamhome/tam_object_detection.git --recursive-submod
 - When running in apptainer, build ros_ws under `--fakeroot --writable` and make sure the node is started with `rosrun cutie_ros cutie_service_node.py`.
 
 ```bash
+apptainer shell --nv --fakeroot --writable <env_name>
+cd src/
+pip install .
+pip install git+https://github.com/ChaoningZhang/MobileSAM.git
+pip install timm
 cd scripts/
 python download_weights_fakeroot.py
 ```
+
+- when running in local env.
 
 ```bash
 cd src
 python cutie/utils/download_models.py
 ```
+
+- Download the model weights for [`io/weights/`](./io/weights/README.md) from the [checkpoints](https://drive.google.com/file/d/1dE-YAG-1mFCBmao2rHDp0n-PP4eH7SjE/view?usp=sharing).
 
 ## How to use
 
@@ -73,4 +82,21 @@ def call_start_tracking(self, image_msgs, mask_msgs):
     except rospy.ServiceException as e:
         rospy.logerr(f"Service call failed: {e}")
 
+```
+
+```python
+import sys
+sys.path.append(roslib.packages.get_pkg_dir("cutie_ros") + "/script")
+from lib_tracking import CutieTrackingUtils
+
+libtracking = CutieTrackingUtils()
+
+# start tracking
+libtracking.saved_mask_based_tracking("object_name")
+
+# stop tracking
+libtracking.stop_tracking()
+
+# clear memory for tracking new object
+libtracking.clear_memory()
 ```
