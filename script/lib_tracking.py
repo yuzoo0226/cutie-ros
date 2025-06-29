@@ -85,4 +85,4 @@ class CutieTrackingUtils:
 
 if __name__ == "__main__":
     node = CutieTrackingUtils()
-    node.call_start_tracking(object_name="door_knob")
+    node.saved_mask_based_tracking(object_name="door_knob")

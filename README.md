@@ -32,7 +32,7 @@ cd src/
 pip install .
 pip install git+https://github.com/ChaoningZhang/MobileSAM.git
 pip install timm
-cd scripts/
+cd ../scripts/
 python download_weights_fakeroot.py
 ```
 
