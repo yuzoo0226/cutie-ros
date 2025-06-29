@@ -25,6 +25,7 @@ from std_srvs.srv import Trigger, TriggerResponse, TriggerRequest
 class TrackingNode:
     def __init__(self):
         self.is_tracking = False
+        self.use_cv2_window = False
         self.lock = threading.Lock()
         self.bridge = CvBridge()
 
@@ -200,8 +201,9 @@ class TrackingNode:
             except TypeError as e:
                 print(f"{e}: tracking failed")
 
-            cv2.imshow("tracking_image", overlay_mask)
-            cv2.waitKey(1)
+            if self.use_cv2_window:
+                cv2.imshow("tracking_image", overlay_mask)
+                cv2.waitKey(1)
 
             segment_img_msg = self.bridge.cv2_to_imgmsg(cv_bgr, encoding="bgr8")
             overlay_img_msg = self.bridge.cv2_to_imgmsg(overlay_mask, encoding="bgr8")
