@@ -6,6 +6,7 @@ import sys
 import cv2
 import rospy
 import torch
+import roslib
 import logging
 import threading
 import numpy as np
@@ -18,7 +19,7 @@ from cutie.utils.get_default_model import get_default_model
 
 from sensor_msgs.msg import Image, CompressedImage
 from cutie_ros.srv import StartTracking, StartTrackingResponse, StopTracking, StopTrackingResponse
-
+from std_srvs.srv import Trigger, TriggerResponse, TriggerRequest
 
 class TrackingNode:
     def __init__(self):
@@ -34,8 +35,9 @@ class TrackingNode:
         self.result_segment_pub = rospy.Publisher("/cutie_tracking/result_segment", Image, queue_size=1)
         self.image_sub = rospy.Subscriber("/hsrb/hand_camera/image_raw/compressed", CompressedImage, self.sub_hand_bgr)
 
-        self.start_service = rospy.Service("start_tracking", StartTracking, self.handle_start)
-        self.stop_service = rospy.Service("stop_tracking", StopTracking, self.handle_stop)
+        self.cutie_package_dir = roslib.packages.get_pkg_dir("cutie_ros")
+        self.start_service = rospy.Service("/cutie/start_tracking", StartTracking, self.handle_start)
+        self.stop_service = rospy.Service("/cutie/stop_tracking", StopTracking, self.handle_stop)
 
         self.tracking_thread = None
         rospy.loginfo("TrackingNode initialized.")
@@ -71,6 +73,11 @@ class TrackingNode:
         else:
             raise ValueError(f"Unsupported image mode: {pil_img.mode}")
 
+    def handle_clear(self, req):
+        self.processor.clear_memory()
+        rospy.loginfo("Clear tracking object memory.")
+        return TriggerResponse(True, "Clear tracking object memory.")
+
     def handle_start(self, req):
         with self.lock:
             if self.is_tracking:
@@ -79,9 +86,26 @@ class TrackingNode:
 
         self.images = req.images
         self.masks = req.masks
-        self.timestep = 0
+        self.obj_name = req.object_name
 
-        print(len(self.images))
+        if self.obj_name is not None:
+            cv_bgr = cv2.imread(os.path.join(self.cutie_package_dir, f"io/images/{self.obj_name}.png"), 1)
+            cv_mask = cv2.imread(os.path.join(self.cutie_package_dir, f"io/masks/{self.obj_name}.png"), 0)
+            cv_rgb = cv2.cvtColor(cv_bgr, cv2.COLOR_BGR2RGB)
+
+            pil_rgb = PILImage.fromarray(cv_rgb)
+            pil_mask = PILImage.fromarray(cv_mask, mode="L")
+
+            # palette is for visualization
+            self.palette = pil_mask.getpalette()
+            self.objects = np.unique(np.array(pil_mask))
+            self.objects = self.objects[self.objects != 0].tolist()
+
+            torch_rgb = to_tensor(pil_rgb).cuda().float()
+            torch_mask = torch.from_numpy(np.array(pil_mask)).cuda()
+
+            _ = self.processor.step(torch_rgb, torch_mask, objects=self.objects)
+            rospy.loginfo(f"Tracking started with {self.obj_name} images.")
 
         for idx in range(len(self.images)):
             print(idx)
@@ -103,18 +127,18 @@ class TrackingNode:
             # palette is for visualization
             self.palette = pil_mask.getpalette()
             self.objects = np.unique(np.array(pil_mask))
-            # background "0" does not count as an object
             self.objects = self.objects[self.objects != 0].tolist()
 
             torch_rgb = to_tensor(pil_rgb).cuda().float()
             torch_mask = torch.from_numpy(np.array(pil_mask)).cuda()
 
             _ = self.processor.step(torch_rgb, torch_mask, objects=self.objects)
+            rospy.loginfo("Tracking started with {} images.".format(len(self.images)))
             break
 
         self.tracking_thread = threading.Thread(target=self.tracking_loop)
         self.tracking_thread.start()
-        rospy.loginfo("Tracking started with {} images.".format(len(self.images)))
+        # rospy.loginfo("Tracking started with {} images.".format(len(self.images)))
         return StartTrackingResponse(True, "Tracking started.")
 
     def handle_stop(self, req):
