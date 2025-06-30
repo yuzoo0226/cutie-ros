@@ -35,7 +35,8 @@ class AutoMaskGenerator:
         self.predictor = SamPredictor(self.mobile_sam)
 
         self.bridge = CvBridge()
-        self.image_sub = rospy.Subscriber("/hsrb/hand_camera/image_raw/compressed", CompressedImage, self.image_callback)
+        # self.image_sub = rospy.Subscriber("/hsrb/hand_camera/image_raw/compressed", CompressedImage, self.image_callback)
+        self.image_sub = rospy.Subscriber("/hsrb/head_rgbd_sensor/rgb/image_raw/compressed", CompressedImage, self.image_callback)
 
         # self.cv_image = None
         self.right_drag_start = None
