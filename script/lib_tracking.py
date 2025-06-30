@@ -74,7 +74,7 @@ class CutieTrackingUtils:
 
     def stop_tracking(self):
         req = StopTrackingRequest()
-        resp = self.stop_tracking(req)
+        resp = self.stop_service(req)
         rospy.loginfo(f"Success: {resp.success}, Message: {resp.message}")
 
     def clear_memory(self):
