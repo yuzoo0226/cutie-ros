@@ -90,6 +90,7 @@ def call_start_tracking(self, image_msgs, mask_msgs):
 
 ```python
 import sys
+import roslib
 sys.path.append(roslib.packages.get_pkg_dir("cutie_ros") + "/script")
 from lib_tracking import CutieTrackingUtils
 
