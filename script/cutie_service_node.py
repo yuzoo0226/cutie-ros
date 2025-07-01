@@ -18,6 +18,7 @@ from cutie.inference.inference_core import InferenceCore
 from cutie.utils.get_default_model import get_default_model
 
 from sensor_msgs.msg import Image, CompressedImage
+from std_msgs.msg import String, Bool
 from cutie_ros.srv import StartTracking, StartTrackingResponse, StopTracking, StopTrackingResponse
 from std_srvs.srv import Trigger, TriggerResponse, TriggerRequest
 
@@ -35,6 +36,7 @@ class TrackingNode:
 
         self.result_bgr_pub = rospy.Publisher("/cutie_tracking/result_bgr", Image, queue_size=1)
         self.result_segment_pub = rospy.Publisher("/cutie_tracking/result_segment", Image, queue_size=1)
+        self.status_string_pub = rospy.Publisher("/cutie_tracking/tracking_status", Bool, queue_size=1)
 
         # self.image_sub = rospy.Subscriber("/hsrb/hand_camera/image_raw/compressed", CompressedImage, self.sub_hand_bgr)
         self.image_sub = rospy.Subscriber("/hsrb/head_rgbd_sensor/rgb/image_raw/compressed", CompressedImage, self.sub_hand_bgr)
@@ -89,6 +91,7 @@ class TrackingNode:
                 return StartTrackingResponse(False, "Tracking is already running.")
             self.is_tracking = True
 
+        self.req = req
         self.images = req.images
         self.masks = req.masks
         self.obj_name = req.object_name
@@ -200,18 +203,26 @@ class TrackingNode:
 
             try:
                 overlay_mask = self.make_overlay_image(pillow_mask=pil_rgb, pillow_bgr=self.target_pil_rgb)
+                segment_img_msg = self.bridge.cv2_to_imgmsg(cv_bgr, encoding="bgr8")
+                overlay_img_msg = self.bridge.cv2_to_imgmsg(overlay_mask, encoding="bgr8")
+                self.result_segment_pub.publish(segment_img_msg)
+                self.result_bgr_pub.publish(overlay_img_msg)
+                self.status_string_pub.publish(Bool(data=True))
             except TypeError as e:
-                print(f"{e}: tracking failed")
+                # self.handle_clear(None)
+                # rospy.sleep(1)
+                # self.handle_stop(None)
+                # rospy.sleep(1)
+                # self.handle_start(self.req)  # Restart tracking if TypeError occurs
+                # rospy.sleep(3)
+                self.status_string_pub.publish(Bool(data=False))
+                rospy.logwarn(f"{e}: tracking failed")
+            except UnboundLocalError as e:
+                rospy.logwarn(f"{e}: tracking failed, probably no object detected")
 
             if self.use_cv2_window:
                 cv2.imshow("tracking_image", overlay_mask)
                 cv2.waitKey(1)
-
-            segment_img_msg = self.bridge.cv2_to_imgmsg(cv_bgr, encoding="bgr8")
-            overlay_img_msg = self.bridge.cv2_to_imgmsg(overlay_mask, encoding="bgr8")
-            self.result_segment_pub.publish(segment_img_msg)
-            self.result_bgr_pub.publish(overlay_img_msg)
-
 
 if __name__ == "__main__":
     rospy.init_node("tracking_node")

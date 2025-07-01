@@ -37,7 +37,8 @@ class PoseEstimatorNode:
         self.seg_sub = rospy.Subscriber("/cutie_tracking/result_segment", Image, self.seg_callback)
         self.depth_sub = rospy.Subscriber("/hsrb/head_rgbd_sensor/depth_registered/image_rect_raw/compressedDepth", CompressedImage, self.depth_callback)
         # self.depth_sub = rospy.Subscriber("/hsrb/head_rgbd_sensor/depth_registered/image_raw/compressed", CompressedImage, self.depth_callback)
-        self.maker_pub = rospy.Publisher("/pose_estimator/maker", Marker, queue_size=1)
+        self.maker_pub = rospy.Publisher("/cutie_tracking/pose_estimator/maker", Marker, queue_size=1)
+        self.pose_pub = rospy.Publisher("/cutie_tracking/pose_estimator/pose", Pose, queue_size=1)
 
         p_camera_info_topic = rospy.get_param("~camera_info_topic", "/hsrb/head_rgbd_sensor/depth_registered/camera_info")
         self.frame_id = rospy.get_param("~frame_id", "map")
@@ -65,7 +66,7 @@ class PoseEstimatorNode:
         # 輪郭抽出
         contours, _ = cv2.findContours(mask_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         print(f"Found {len(contours)} contours.")
-        print(contours)
+        # print(contours)
 
         if len(contours) == 0:
             return None  # 物体がない場合
@@ -150,8 +151,6 @@ class PoseEstimatorNode:
             return
 
         mask = self.bridge.imgmsg_to_cv2(msg, desired_encoding="mono8")
-        # self.depth_image[mask < 127] = 0
-
         bbox_tuple = self.get_bbox_from_mask(mask_img=mask)
         if bbox_tuple is None:
             rospy.logwarn("No valid mask found.")
@@ -164,16 +163,18 @@ class PoseEstimatorNode:
 
         center_pose = poses[0]  # Assuming single object detection
 
-        rospy.loginfo(f"Center pose: {center_pose}")
-        rospy.loginfo(f"{self.description.frame.rgbd} -> {self.description.frame.map}")
+        if center_pose is None:
+            rospy.logwarn("No valid pose found for the detected object.")
+            return
+
         pose_on_map = self.tamtf.get_pose_with_offset(
             self.description.frame.map,
             self.description.frame.rgbd,
             center_pose,
             "pose_tracking",
         )
-        rospy.loginfo(f"Pose on map: {pose_on_map}")
 
+        self.pose_pub.publish(center_pose)
         self.marker_publisher(pose_on_map)
 
 
