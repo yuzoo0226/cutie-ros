@@ -37,7 +37,7 @@ class TrackingNode:
         self.result_segment_pub = rospy.Publisher("/cutie_tracking/result_segment", Image, queue_size=1)
 
         # self.image_sub = rospy.Subscriber("/hsrb/hand_camera/image_raw/compressed", CompressedImage, self.sub_hand_bgr)
-        self.image_sub = rospy.Subscriber("/hsrb/head_rgbd_sensor/rgb/image_raw/compressed", CompressedImage, self.image_callback)
+        self.image_sub = rospy.Subscriber("/hsrb/head_rgbd_sensor/rgb/image_raw/compressed", CompressedImage, self.sub_hand_bgr)
 
         self.cutie_package_dir = roslib.packages.get_pkg_dir("cutie_ros")
         self.start_service = rospy.Service("/cutie/start_tracking", StartTracking, self.handle_start)
