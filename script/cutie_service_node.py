@@ -47,6 +47,7 @@ class TrackingNode:
         self.clear_service = rospy.Service("/cutie/clear_memory", Trigger, self.handle_clear)
 
         self.tracking_thread = None
+        self.target_pil_rgb = None
         rospy.loginfo("TrackingNode initialized.")
 
     def sub_hand_bgr(self, msg: CompressedImage):
@@ -54,7 +55,6 @@ class TrackingNode:
         np_arr: np.ndarray = np.frombuffer(msg.data, dtype=np.uint8)
         cv_bgr: np.ndarray = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         cv_rgb = cv2.cvtColor(cv_bgr, cv2.COLOR_BGR2RGB)
-
         self.target_pil_rgb = PILImage.fromarray(cv_rgb)
 
     @staticmethod
@@ -190,6 +190,11 @@ class TrackingNode:
             with self.lock:
                 if not self.is_tracking:
                     break
+            
+            if self.target_pil_rgb is None:
+                rospy.logwarn("No target image available for tracking.")
+                rospy.sleep(1)
+                continue
 
             target_image = to_tensor(self.target_pil_rgb).cuda().float()
             output_prob = self.processor.step(target_image)  # inference
