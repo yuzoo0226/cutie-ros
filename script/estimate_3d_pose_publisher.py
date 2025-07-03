@@ -165,6 +165,29 @@ class PoseEstimatorNode:
 
         return msg
 
+    @staticmethod
+    def identity():
+        return TransformHelper.identity()
+
+    @staticmethod
+    def box_lines(lower, upper):
+        x_l, y_l, z_l = lower
+        x_u, y_u, z_u = upper
+        return [
+            ([x_l, y_l, z_l], [x_u, y_l, z_l]),
+            ([x_u, y_l, z_l], [x_u, y_u, z_l]),
+            ([x_u, y_u, z_l], [x_l, y_u, z_l]),
+            ([x_l, y_u, z_l], [x_l, y_l, z_l]),
+            ([x_l, y_l, z_u], [x_u, y_l, z_u]),
+            ([x_u, y_l, z_u], [x_u, y_u, z_u]),
+            ([x_u, y_u, z_u], [x_l, y_u, z_u]),
+            ([x_l, y_u, z_u], [x_l, y_l, z_u]),
+            ([x_l, y_l, z_l], [x_l, y_l, z_u]),
+            ([x_u, y_l, z_l], [x_u, y_l, z_u]),
+            ([x_u, y_u, z_l], [x_u, y_u, z_u]),
+            ([x_l, y_u, z_l], [x_l, y_u, z_u]),
+        ]
+
     def create_marker(self, type, frame, pose, scale=None, color=None, ns="", id=0):
         if scale is None:
             scale = [1, 1, 1]
@@ -349,30 +372,6 @@ class PoseEstimatorNode:
 
         marker.lifetime = rospy.Duration(0.1)
         self.bbox_maker_pub.publish(marker)        
-
-    @staticmethod
-    def identity():
-        return TransformHelper.identity()
-
-    @staticmethod
-    def box_lines(lower, upper):
-        x_l, y_l, z_l = lower
-        x_u, y_u, z_u = upper
-        return [
-            ([x_l, y_l, z_l], [x_u, y_l, z_l]),
-            ([x_u, y_l, z_l], [x_u, y_u, z_l]),
-            ([x_u, y_u, z_l], [x_l, y_u, z_l]),
-            ([x_l, y_u, z_l], [x_l, y_l, z_l]),
-            ([x_l, y_l, z_u], [x_u, y_l, z_u]),
-            ([x_u, y_l, z_u], [x_u, y_u, z_u]),
-            ([x_u, y_u, z_u], [x_l, y_u, z_u]),
-            ([x_l, y_u, z_u], [x_l, y_l, z_u]),
-            ([x_l, y_l, z_l], [x_l, y_l, z_u]),
-            ([x_u, y_l, z_l], [x_u, y_l, z_u]),
-            ([x_u, y_u, z_l], [x_u, y_u, z_u]),
-            ([x_l, y_u, z_l], [x_l, y_u, z_u]),
-        ]
-
 
     def roi(self, frame, size):
         pose = self.identity()
