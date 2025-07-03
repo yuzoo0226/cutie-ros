@@ -5,6 +5,7 @@
     <arg name="source_frame_id" default="camera_frame"/>
     <arg name="debug" default="false"/>
     <arg name="rviz" default="false"/>
+    <arg name="pose_estimator" default="true"/>
 
     <node pkg="cutie_ros" type="cutie_service_node.py" name="cutie_service_node" output="screen">
         <param name="/camera_info_topic" type="str" value="$(arg camera_info_topic)"/>
@@ -13,7 +14,9 @@
         <param name="/source_frame_id" type="str" value="$(arg source_frame_id)"/>
     </node>
 
-    <node pkg="cutie_ros" type="estimate_3d_pose_publisher.py" name="estimate_3d_pose_publisher" output="screen" />
+    <group if="$(arg pose_estimator)">
+        <node pkg="cutie_ros" type="estimate_3d_pose_publisher.py" name="estimate_3d_pose_publisher" output="screen" />
+    </group>
 
     <group if="$(arg debug)">
         <node pkg="cutie_ros" name="lib_tracking" type="lib_tracking.py" output="screen" />
