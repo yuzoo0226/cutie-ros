@@ -7,11 +7,12 @@ import glob
 import rospy
 import numpy as np
 from cv_bridge import CvBridge
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, PointCloud2
 from tam_object_detection.msg import ObjectDetection
 from tam_object_detection.srv import ObjectDetectionService, ObjectDetectionServiceResponse
 from cutie_ros.srv import StartTracking, StartTrackingRequest, StopTracking, StopTrackingRequest, StopTrackingResponse
 from std_srvs.srv import Trigger, TriggerResponse, TriggerRequest
+from visualization_msgs.msg import Marker
 
 
 class CutieTrackingUtils:
@@ -22,6 +23,21 @@ class CutieTrackingUtils:
         self.start_service = rospy.ServiceProxy("/cutie/start_tracking", StartTracking)
         self.stop_service = rospy.ServiceProxy("/cutie/stop_tracking", StopTracking)
         self.clear_service = rospy.ServiceProxy("/cutie/clear_memory", Trigger)
+
+        self.pcd = None
+        self.bbox = None
+
+        self.bbox_maker_sub = rospy.Subscriber("/cutie_tracking/pose_estimator/bbox", Marker, self._bbox_maker_callback)
+        self.pcd_sub = rospy.Subscriber("/cutie_tracking/pose_estimator/pcd_cloud", PointCloud2, self._pcd_callback)
+
+    def _bbox_maker_callback(self, msg: Marker):
+        """Callback for the bounding box maker subscriber."""
+        self.bbox = msg
+
+    def _pcd_callback(self, msg: PointCloud2):
+        """Callback for the point cloud subscriber."""
+        self.pcd = msg
+
 
     # TODO(yano): IDの指定に対応する
     def detection_based_tracking(self, msg: ObjectDetection):
@@ -85,6 +101,13 @@ class CutieTrackingUtils:
         rospy.loginfo(f"Success: {resp.success}, Message: {resp.message}")
         return resp
 
+    def get_pcd(self) -> PointCloud2:
+        """Get the point cloud data."""
+        return self.pcd
+
+    def get_3d_bbox(self) -> Marker:
+        """Get the 3D bounding box."""
+        return self.bbox
 
 if __name__ == "__main__":
     rospy.init_node("test_start_tracking_node")

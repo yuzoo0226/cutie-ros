@@ -56,7 +56,7 @@ class PoseEstimatorNode:
         self.point_maker_pub = rospy.Publisher("/cutie_tracking/pose_estimator/maker", Marker, queue_size=1)
         self.bbox_maker_pub = rospy.Publisher("/cutie_tracking/pose_estimator/bbox", Marker, queue_size=1)
         self.pose_pub = rospy.Publisher("/cutie_tracking/pose_estimator/pose", Pose, queue_size=1)
-        self.cutie_map_cloud_pub = rospy.Publisher("/cutie_tracking/pose_estimator/map_cloud", PointCloud2, queue_size=1)
+        self.cutie_map_cloud_pub = rospy.Publisher("/cutie_tracking/pose_estimator/pcd_cloud", PointCloud2, queue_size=1)
         self.roi_pose_marker_pub = rospy.Publisher("/cutie_tracking/pose_estimator/roi", MarkerArray, queue_size=1)
 
         p_camera_info_topic = rospy.get_param("~camera_info_topic", "/hsrb/head_rgbd_sensor/depth_registered/camera_info")
@@ -371,7 +371,7 @@ class PoseEstimatorNode:
         marker.color.a = 0.5
 
         marker.lifetime = rospy.Duration(0.1)
-        self.bbox_maker_pub.publish(marker)        
+        self.bbox_maker_pub.publish(marker)
 
     def roi(self, frame, size):
         pose = self.identity()
