@@ -89,4 +89,4 @@ class CutieTrackingUtils:
 if __name__ == "__main__":
     rospy.init_node("test_start_tracking_node")
     node = CutieTrackingUtils()
-    node.saved_mask_based_tracking(object_name="dishwasher")
+    node.saved_mask_based_tracking(object_name="trash")
