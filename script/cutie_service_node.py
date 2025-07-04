@@ -91,6 +91,8 @@ class TrackingNode:
                 return StartTrackingResponse(False, "Tracking is already running.")
             self.is_tracking = True
 
+        rospy.set_param("/cutie/task_frame_id", req.object_name)
+
         self.req = req
         self.images = req.images
         self.masks = req.masks

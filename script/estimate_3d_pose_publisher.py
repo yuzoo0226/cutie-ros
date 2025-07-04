@@ -66,7 +66,7 @@ class PoseEstimatorNode:
         self.p_resolution = rospy.get_param("~resolution", 40)
         self.p_max_distance = rospy.get_param("~max_distance", -1)
         self.p_specific_id = rospy.get_param("~specific_id", "")
-        self.p_task_frame_id = rospy.get_param("~task_frame_id", "pose_tracking")
+        self.p_task_frame_id = rospy.get_param("/cutie/task_frame_id", "pose_tracking")
         self.is_pub_bbox = rospy.get_param("~is_pub_bbox", True)
 
         self.camera_info = rospy.wait_for_message(p_camera_info_topic, CameraInfo)
@@ -74,7 +74,6 @@ class PoseEstimatorNode:
         self.set_camera_model(self.camera_info)
 
         rospy.loginfo("PoseEstimatorNode initialized (no sync). Waiting for messages...")
-
 
     def from_pose_msg(self, msg):
         translation = self.from_vector3_msg(msg.position)
@@ -218,14 +217,12 @@ class PoseEstimatorNode:
         marker.points = [self.to_point_msg(point) for point in points]
         return marker
 
-
-    def create_grasp_marker(frame, grasp, color, ns, id=0, depth=0.05, radius=0.005):
+    def create_grasp_marker(self, frame, grasp, color, ns, id=0, depth=0.05, radius=0.005):
         # Faster grasp marker using Marker.LINE_LIST
         pose, w, d, scale = grasp.pose, grasp.width, depth, [radius, 0.0, 0.0]
         w *= 0.135 / 1  # width=1 -> 13.5cm
         points = [[0, -w / 2, d], [0, -w / 2, 0], [0, w / 2, 0], [0, w / 2, d]]
         return self.create_line_strip_marker(frame, pose, scale, color, points, ns, id)
-
 
     @staticmethod
     def get_bbox_from_mask(mask_img):
@@ -394,6 +391,8 @@ class PoseEstimatorNode:
             rospy.logwarn("No valid mask found.")
             return
 
+        self.p_task_frame_id = rospy.get_param("/cutie/task_frame_id", "pose_tracking")
+
         poses = self.get_3d_poses(
             depth=self.depth_image,
             bboxes=torch.tensor([bbox_tuple], dtype=torch.float32) ,
@@ -410,7 +409,7 @@ class PoseEstimatorNode:
             self.description.frame.map,
             self.description.frame.rgbd,
             center_pose,
-            "pose_tracking",
+            self.p_task_frame_id,
         )
 
         self.pose_pub.publish(center_pose)
@@ -428,7 +427,7 @@ class PoseEstimatorNode:
                 self.description.frame.rgbd,
                 self.description.frame.map,
                 pose_on_map,
-                "pose_tracking_camera",
+                f"{self.p_task_frame_id}_camera",
             )
 
             self.tamtf.send_static_transform(
