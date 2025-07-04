@@ -86,7 +86,8 @@ class CutieTrackingUtils:
             rospy.loginfo(f"Success: {resp.success}, Message: {resp.message}")
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call failed: {e}")
-        
+            return False
+
         return resp
 
     def stop_tracking(self):
