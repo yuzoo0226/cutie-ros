@@ -136,15 +136,15 @@ class AutoMaskGenerator:
                 masked_image[mask] = target_image[mask]
                 masked_image = cv2.cvtColor(masked_image, cv2.COLOR_RGB2BGR)
 
-                cv2.imshow(f"Mask {i} score {score}", masked_image)
+                cv2.imshow(f"Mask {i}", masked_image)
                 cv2.waitKey(10)
                 print(f"Mask {i} score {score}", masked_image)
 
             self.update_visualize = True
             cv2.waitKey(10)
 
-            mask_id = int(input("どのマスクを保存しますか？ 数字を入力してください．>>>"))
-            object_name = input("物体名はなんですか？ 文字列を入力してください．>>>")
+            mask_id = int(input("どのマスクを保存しますか？ 数字を入力してください．>>> "))
+            object_name = input("物体名はなんですか？ 文字列を入力してください．>>> ")
 
             self.save_masked_gray_image(self.cv_image, masks[mask_id], object_name=object_name)
 
