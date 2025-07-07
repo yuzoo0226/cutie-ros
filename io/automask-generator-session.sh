@@ -42,7 +42,7 @@ if [ $? != 0 ]; then
     tmux send-keys -t $SESSION 'source devel/setup.bash' C-m
     tmux send-keys -t $SESSION 'sleep 2' C-m
     tmux send-keys -t $SESSION C-l
-    tmux send-keys -t $SESSION "rosbag play -l -r 0.5 ${ARG1} -s 0"
+    tmux send-keys -t $SESSION "rosbag play -l rosbag/${ARG1} -r 0.5 -s 0"
 
     tmux select-pane -R
     tmux send-keys -t $SESSION 'cd ~/usr/tamhome_ws/' C-m
