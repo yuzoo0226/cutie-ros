@@ -20,7 +20,7 @@ from cutie.utils.get_default_model import get_default_model
 from sensor_msgs.msg import Image, CompressedImage
 from std_msgs.msg import String, Bool
 from cutie_ros.srv import StartTracking, StartTrackingResponse, StopTracking, StopTrackingResponse
-from std_srvs.srv import Trigger, TriggerResponse, TriggerRequest
+from std_srvs.srv import Trigger, TriggerResponse, TriggerRequest, SetBool, SetBoolRequest, SetBoolResponse
 
 
 class TrackingNode:
@@ -46,9 +46,23 @@ class TrackingNode:
         self.stop_service = rospy.Service("/cutie/stop_tracking", StopTracking, self.handle_stop)
         self.clear_service = rospy.Service("/cutie/clear_memory", Trigger, self.handle_clear)
 
+        self.run_enable = True
+        self.run_enable_service = rospy.Service("/cutie/run_enable", SetBool, self.handle_run_enable)
+
         self.tracking_thread = None
         self.target_pil_rgb = None
         rospy.loginfo("TrackingNode initialized.")
+
+    def handle_run_enable(self, req: SetBoolRequest) -> SetBoolResponse:
+        """
+        Handle the run enable service to start or stop tracking.
+        """
+        self.run_enable = req.data
+        if self.run_enable:
+            rospy.loginfo("Tracking enabled.")
+        else:
+            rospy.loginfo("Tracking disabled.")
+        return SetBoolResponse(success=True, message="Run enable set to {}".format(req.data))
 
     def sub_hand_bgr(self, msg: CompressedImage):
         # Decode the compressed image to OpenCV format
@@ -90,6 +104,8 @@ class TrackingNode:
             if self.is_tracking:
                 return StartTrackingResponse(False, "Tracking is already running.")
             self.is_tracking = True
+
+        rospy.set_param("/cutie/task_frame_id", req.object_name)
 
         self.req = req
         self.images = req.images
@@ -191,6 +207,11 @@ class TrackingNode:
                 if not self.is_tracking:
                     break
             
+            if self.run_enable is False:
+                rospy.logdebug("Tracking is not enabled, waiting for start command.")
+                rospy.sleep(0.5)
+                continue
+
             if self.target_pil_rgb is None:
                 rospy.logwarn("No target image available for tracking.")
                 rospy.sleep(1)

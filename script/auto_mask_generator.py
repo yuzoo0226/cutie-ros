@@ -47,6 +47,7 @@ class AutoMaskGenerator:
         # cv2.setMouseCallback("Live Image", self.mouse_callback)
         self.complete_define = False
         self.update_visualize = True
+        self.cv_image = None
 
     def save_masked_gray_image(self, cv_image: np.ndarray, mask: np.ndarray, object_name: str):
         """
@@ -136,15 +137,18 @@ class AutoMaskGenerator:
                 masked_image[mask] = target_image[mask]
                 masked_image = cv2.cvtColor(masked_image, cv2.COLOR_RGB2BGR)
 
-                cv2.imshow(f"Mask {i} score {score}", masked_image)
+                cv2.imshow(f"Mask {i}", masked_image)
                 cv2.waitKey(10)
                 print(f"Mask {i} score {score}", masked_image)
 
             self.update_visualize = True
             cv2.waitKey(10)
 
-            mask_id = int(input("どのマスクを保存しますか？ 数字を入力してください．>>>"))
-            object_name = input("物体名はなんですか？ 文字列を入力してください．>>>")
+            mask_id = int(input("どのマスクを保存しますか？ 数字を入力してください．>>> "))
+            if mask_id < 0 or mask_id >= len(masks):
+                print("無効なマスクIDです。")
+                return
+            object_name = input("物体名はなんですか？ 文字列を入力してください．>>> ")
 
             self.save_masked_gray_image(self.cv_image, masks[mask_id], object_name=object_name)
 
@@ -160,13 +164,19 @@ class AutoMaskGenerator:
             return
 
         if self.update_visualize:
-            cv2.imshow("Live Image", self.cv_image)
-            cv2.waitKey(1)
+            # cv2.imshow("Live Image", self.cv_image)
+            # cv2.waitKey(1)
             self.define_callback()
             self.complete_define = True
 
     def run(self):
-        rospy.spin()
+        rate = rospy.Rate(10)  # 10Hz くらいでループ
+        while not rospy.is_shutdown():
+            if self.cv_image is not None:
+                cv2.imshow("Live Image", self.cv_image)
+                cv2.waitKey(1)
+            rate.sleep()
+
         cv2.destroyAllWindows()
 
 
