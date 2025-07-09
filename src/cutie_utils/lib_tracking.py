@@ -101,13 +101,27 @@ class CutieTrackingUtils:
         rospy.loginfo(f"Success: {resp.success}, Message: {resp.message}")
         return resp
 
-    def get_pcd(self) -> PointCloud2:
-        """Get the point cloud data."""
-        return self.pcd
+    def get_pcd(self, timeout=3) -> PointCloud2:
+        """Get the point cloud data, with timeout and polling."""
+        start_time = rospy.Time.now()
+        rate = rospy.Rate(10)  # 10 Hz = sleep 0.1s
 
-    def get_3d_bbox(self) -> Marker:
-        """Get the 3D bounding box."""
-        return self.bbox
+        while (rospy.Time.now() - start_time).to_sec() < timeout:
+            if self.pcd is not None:
+                return self.pcd
+            rate.sleep()
+        return None
+
+    def get_3d_bbox(self, timeout=3) -> Marker:
+        """Get the 3D bounding box, with timeout and polling."""
+        start_time = rospy.Time.now()
+        rate = rospy.Rate(10)  # 10 Hz = sleep 0.1s
+
+        while (rospy.Time.now() - start_time).to_sec() < timeout:
+            if self.bbox is not None:
+                return self.bbox
+            rate.sleep()
+        return None
 
 if __name__ == "__main__":
     rospy.init_node("test_start_tracking_node")
