@@ -125,5 +125,15 @@ class CutieTrackingUtils:
 
 if __name__ == "__main__":
     rospy.init_node("test_start_tracking_node")
+    # 引数でオブジェクト名を指定する
+    if len(rospy.myargv()) > 1:
+        object_name = rospy.myargv()[1]
+    else:
+        object_name = "dishwasher"
     node = CutieTrackingUtils()
-    node.saved_mask_based_tracking(object_name="trash")
+    node.clear_memory()
+    node.stop_tracking()
+    node.saved_mask_based_tracking(object_name=object_name)
+    input("Press Enter to stop tracking...")
+    node.stop_tracking()
+    node.clear_memory()
