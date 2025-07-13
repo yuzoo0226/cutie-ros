@@ -134,3 +134,6 @@ if __name__ == "__main__":
     node.clear_memory()
     node.stop_tracking()
     node.saved_mask_based_tracking(object_name=object_name)
+    input("Press Enter to stop tracking...")
+    node.stop_tracking()
+    node.clear_memory()
