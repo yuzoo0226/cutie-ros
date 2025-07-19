@@ -60,7 +60,7 @@ class PoseEstimatorNode:
         self.roi_pose_marker_pub = rospy.Publisher("/cutie_tracking/pose_estimator/roi", MarkerArray, queue_size=1)
 
         p_camera_info_topic = rospy.get_param("~camera_info_topic", "/hsrb/head_rgbd_sensor/depth_registered/camera_info")
-        self.frame_id = rospy.get_param("~frame_id", "map")
+        self.frame_id = rospy.get_param("~frame_id", self.description.frame.base)
         self.camera_frame_id = rospy.get_param("~camera_frame_id", "head_rgbd_sensor_rgb_frame")
         self.p_length = rospy.get_param("~length", 0.3)
         self.p_resolution = rospy.get_param("~resolution", 40)
@@ -367,7 +367,7 @@ class PoseEstimatorNode:
         marker.color.b = 0.0
         marker.color.a = 0.5
 
-        marker.lifetime = rospy.Duration(0.1)
+        marker.lifetime = rospy.Duration(1.0)
         self.bbox_maker_pub.publish(marker)
 
     def roi(self, frame, size):
@@ -405,28 +405,28 @@ class PoseEstimatorNode:
             rospy.logwarn("No valid pose found for the detected object.")
             return
 
-        pose_on_map = self.tamtf.get_pose_with_offset(
-            self.description.frame.map,
+        pose_on_base = self.tamtf.get_pose_with_offset(
+            self.description.frame.base,
             self.description.frame.rgbd,
             center_pose,
             self.p_task_frame_id,
         )
 
         self.pose_pub.publish(center_pose)
-        self.marker_publisher(pose_on_map)
+        self.marker_publisher(pose_on_base)
 
         if self.is_pub_bbox:
-            pose_on_map.position.x -= self.p_length / 2.0
-            pose_on_map.position.y -= self.p_length / 2.0
-            pose_on_map.position.z -= self.p_length / 2.0
-            if pose_on_map.position.z < 0.0:
-                pose_on_map.position.z = 0.0
-            pose_on_map.orientation = Quaternion(0, 0, 0, 1)
+            pose_on_base.position.x -= self.p_length / 2.0
+            pose_on_base.position.y -= self.p_length / 2.0
+            pose_on_base.position.z -= self.p_length / 2.0
+            if pose_on_base.position.z < 0.0:
+                pose_on_base.position.z = 0.0
+            pose_on_base.orientation = Quaternion(0, 0, 0, 1)
 
             pose_on_camera = self.tamtf.get_pose_with_offset(
                 self.description.frame.rgbd,
-                self.description.frame.map,
-                pose_on_map,
+                self.description.frame.base,
+                pose_on_base,
                 f"{self.p_task_frame_id}_camera",
             )
 
