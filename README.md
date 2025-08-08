@@ -28,12 +28,14 @@ python cutie/utils/download_models.py
 
 ```bash
 apptainer shell --nv --fakeroot --writable <env_name>
-cd src/
+cd third_party/
 pip install .
 pip install git+https://github.com/ChaoningZhang/MobileSAM.git
 pip install timm
 cd ../scripts/
 python download_weights_fakeroot.py
+cd ../
+pip install .
 ```
 
 - Download the model weights for [`io/weights/`](./io/weights/README.md) from the [checkpoints](https://drive.google.com/file/d/1dE-YAG-1mFCBmao2rHDp0n-PP4eH7SjE/view?usp=sharing).
@@ -89,10 +91,7 @@ def call_start_tracking(self, image_msgs, mask_msgs):
 ### python library
 
 ```python
-import sys
-import roslib
-sys.path.append(roslib.packages.get_pkg_dir("cutie_ros") + "/script")
-from lib_tracking import CutieTrackingUtils
+from cutie_utils import CutieTrackingUtils
 
 libtracking = CutieTrackingUtils()
 
