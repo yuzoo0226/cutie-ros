@@ -1,0 +1,4 @@
+# StopTracking.srv
+---
+bool success
+string message
