@@ -1,5 +1,7 @@
 # CUTIE for ros Noetic
 
+![teaser](./io/cutie_tracking.jpg "sample")
+
 ## How to install
 
 ### Environment
